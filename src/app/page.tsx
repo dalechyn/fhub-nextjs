@@ -17,7 +17,7 @@ return <Card>
 
 }
 
-export async function* streamingFetch( input: RequestInfo | URL, init?: RequestInit ): Actions.Watch.watchCasts.ReturnType {
+ async function* streamingFetch( input: RequestInfo | URL, init?: RequestInit ): Actions.Watch.watchCasts.ReturnType {
 
     const response = await fetch( input, init)  
   if (!response.body) throw new Error('bad api route')
