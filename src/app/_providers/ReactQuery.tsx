@@ -4,10 +4,16 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import * as React from 'react'
 
 import { ReactQueryStreamedHydration } from '@tanstack/react-query-next-experimental'
-import superjson from 'superjson'
+import superjson, { SuperJSON } from 'superjson'
 
 function makeQueryClient() {
-  return new QueryClient()
+  return new QueryClient({
+
+    defaultOptions: {
+      queries: {
+        queryKeyHashFn: (queryKey)=>SuperJSON.stringify(queryKey),
+      }
+    }})
 }
 
 let browserQueryClient: QueryClient | undefined
