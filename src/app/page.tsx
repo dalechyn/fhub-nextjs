@@ -1,62 +1,50 @@
 'use client'
-import { Card, CardContent } from "@/components/ui/card";
-// import { useGetCastSuspenseQuery } from "@/lib/query/useGetCastSuspenseQuery";
-import { Actions } from "fhub";
-import { Types } from "fhub/Node";
-import { useEffect, useState } from "react";
-import SuperJSON from "superjson";
+import { useUserUpdateMutation } from "@/hooks/fhub/useUserUpdateMutation";
+import { useFarcasterSigner, usePrivy } from '@privy-io/react-auth';
+import { Account } from 'fhub'
 
-function Cast(parameters: {cast: Types.Cast}) {
-return <Card>
-    <CardContent className="space-y-2">
-      <b>
-      fid: {parameters.cast.fid}: </b>
-      {parameters.cast.text.value}
-    </CardContent>
-  </Card>
-
-}
-
- async function* streamingFetch( input: RequestInfo | URL, init?: RequestInit ): Actions.Watch.watchCasts.ReturnType {
-
-    const response = await fetch( input, init)  
-  if (!response.body) throw new Error('bad api route')
-    const reader  = response.body.getReader();
-    const decoder = new TextDecoder('utf-8');
-
-    for( ;; ) {
-        const { done, value } = await reader.read()
-        if( done ) break;
-
-        try {
-            yield SuperJSON.parse<Types.Cast>(decoder.decode(value))
-        }
-        catch( e:any ) {
-            console.warn( e.message )
-        }
-
-    }
-}
 
 export default function Home() {
-  // const getCastSuspenseQuery = useGetCastSuspenseQuery({fid: 11517n, hash: '0x404d509c220ea59dcada18ad8496f8ef115db1d2'})
-const [casts, setCasts] = useState<Types.Cast[]>([]);
+  const userUpdateMutation = useUserUpdateMutation()
+  const { requestFarcasterSignerFromWarpcast, getFarcasterSignerPublicKey, signFarcasterMessage } = useFarcasterSigner();
 
-  useEffect( () => {
-    const asyncFetch = async () => {
-      const it = streamingFetch( '/api/watchCasts') 
+  const privy = usePrivy()
 
-      for await ( const value of it ) {
-        setCasts(prev => [value,...prev])
-      }
+  const farcasterAccount = privy.user?.linkedAccounts.find(
+    (a) => a.type === 'farcaster'
+  )
+
+
+  return <div className="flex flex-col gap-2">
+    <h1>Sign in with farcaster please</h1>
+    {privy.authenticated &&
+      <button
+        onClick={() => requestFarcasterSignerFromWarpcast()}
+        // // Prevent requesting a Farcaster signer if a user has not already linked a Farcaster account
+        // // or if they have already requested a signer
+        disabled={!farcasterAccount || !!farcasterAccount.signerPublicKey}
+      >
+        Authorize my Farcaster signer from Warpcast
+      </button>
     }
+    {!privy.authenticated && <button onClick={() => privy.login()}>Login</button>}
+    {privy.authenticated && <button onClick={() => privy.logout()}>Logout</button>}
+    <button onClick={() => {
+      if (!farcasterAccount || !farcasterAccount.fid) throw new Error('Not connected')
 
-    asyncFetch()
-  }, []);
-
-  return <>
-    <h1 className="text-3xl text-center">provided by Build your own client ™</h1>
-    {casts.map((cast, i) => <Cast cast={cast} key={i}/>)}
-    {/* <Cast cast={getCastSuspenseQuery.data}/> */}
-  </>
+      userUpdateMutation.mutate({
+        account: Account.fromEd25519Signer({
+          fid: BigInt(farcasterAccount.fid),
+          signer: {
+            getSignerKey: getFarcasterSignerPublicKey,
+            signMessageHash: signFarcasterMessage
+          }
+        }),
+        data: {
+          type: 'bio',
+          value: 'My new cool bio'
+        }
+      })
+    }}>Update</button>
+  </div>
 }

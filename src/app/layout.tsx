@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { ReactQueryProvider } from "./_providers/ReactQuery";
+import { PrivyProvider } from "./_providers/PrivyProvider";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -21,17 +22,32 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
+  bio,
+  // casts,
+  display
 }: Readonly<{
   children: React.ReactNode;
+  bio: React.ReactNode;
+  // casts: React.ReactNode;
+  display: React.ReactNode;
 }>) {
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased px-4`}
       >
-        <ReactQueryProvider>
-          {children}
-        </ReactQueryProvider>
+        <PrivyProvider>
+          <ReactQueryProvider>
+            {children}
+            <div>
+              <h2 className="text-medium text-3xl">Settings</h2>
+              {bio}
+              {display}
+            </div>
+
+            {/* Rate limits the shit {casts} */}
+          </ReactQueryProvider>
+        </PrivyProvider>
       </body>
     </html>
   );
